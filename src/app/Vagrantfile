@@ -1,0 +1,65 @@
+Vagrant.configure("2") do |config|
+
+  SHARED_FOLDER = "/home/vagrant/app"
+
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.synced_folder ".", SHARED_FOLDER
+
+  node_config = ->(node) do
+    node.vm.provider "virtualbox" do |vb|
+      vb.memory = 4096
+      vb.cpus = 2
+    end
+
+    node.vm.provision "shell",
+      path: "install_docker.sh",
+      privileged: true
+  end
+
+  config.vm.define "manager01" do |manager|
+    manager.vm.hostname = "manager01"
+    manager.vm.network "private_network", ip: "192.168.56.10"
+
+    # app ports
+    manager.vm.network "forwarded_port", guest: 8081, host: 8081
+    manager.vm.network "forwarded_port", guest: 8087, host: 8087
+    manager.vm.network "forwarded_port", guest: 9443, host: 9443 #portainer
+
+    # Monitoring ports
+    manager.vm.network "forwarded_port", guest: 9090, host: 9090   # Prometheus
+    manager.vm.network "forwarded_port", guest: 3000, host: 3000   # Grafana
+    manager.vm.network "forwarded_port", guest: 3100, host: 3100   # Loki
+    manager.vm.network "forwarded_port", guest: 9115, host: 9115   # Blackbox Exporter
+
+    node_config.call(manager)
+
+    manager.vm.provision "shell", privileged: true, inline: <<~SHELL
+      until docker info >/dev/null 2>&1; do sleep 2; done
+
+      if ! docker info | grep -q "Swarm: active"; then
+        docker swarm init --advertise-addr 192.168.56.10
+      fi
+
+      until docker info | grep -q "Swarm: active"; do sleep 1; done
+      docker swarm join-token worker -q > #{SHARED_FOLDER}/worker_token.txt
+    SHELL
+  end
+
+  (1..2).each do |i|
+    config.vm.define "worker0#{i}" do |worker|
+      worker.vm.hostname = "worker0#{i}"
+      worker.vm.network "private_network", ip: "192.168.56.1#{i}"
+
+      node_config.call(worker)
+
+      worker.vm.provision "shell", privileged: true, inline: <<~SHELL
+        until docker info >/dev/null 2>&1; do sleep 2; done
+        until [ -f #{SHARED_FOLDER}/worker_token.txt ]; do sleep 1; done
+
+        if ! docker info | grep -q "Swarm: active"; then
+          docker swarm join --token $(cat #{SHARED_FOLDER}/worker_token.txt) 192.168.56.10:2377
+        fi
+      SHELL
+    end
+  end
+end
