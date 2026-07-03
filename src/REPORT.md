@@ -3,15 +3,38 @@
 ### Part 1. Использование готового манифеста
 
 1. Запустить окружение Kubernetes с памятью 4 GB.
-    
-2. Применить манифест из директории `/src/example` к созданному окружению Kubernetes.
-    
-3. Запустить стандартную панель управления Kubernetes с помощью команды `minikube dashboard`.
-    
-4. Прокинуть туннели для доступа к развернутым сервисам с помощью команды `minikube service`.
-    
+
+Устанавливаем нужные инструменты
+
+curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check   # проверяем
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+kubectl version --client     # проверяем
+
+![check](images/image_01.png)
+
+Запускаем миникуб
+
+![start](images/image_02.png)
+
+2. Применяем манифест из директории `/src/example` к созданному окружению Kubernetes.
+    example
+![example](images/image_03.png)
+
+3. Запускаем стандартную панель управления Kubernetes с помощью команды `minikube dashboard`.
+
+![minikube dashboard](images/image_04.png)
+
+![minikube service](images/image_05.png)
+
+4. Прокидаваем туннели для доступа к развернутым сервисам с помощью команды `minikube service`.
+
+![minikube service](images/image_0.png)
+ 
 5. Удостовериться в работоспособности развернутого приложения, открыв в браузере страницу приложения (сервис apache).
-    
+   
+![minikube service](images/image_0.png)
 
 ### Part 2. Написание собственного манифеста
 
