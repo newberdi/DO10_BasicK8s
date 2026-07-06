@@ -51,17 +51,17 @@ pipeline {
             steps {
                 dir('src/postman') {
                     sh '''
-                        # Пробрасываем порт к gateway
+                        # пробрасываем порт к gateway
                         kubectl port-forward service/gateway-service -n devops-app 8087:8087 &
                         kubectl port-forward service/session-service -n devops-app 8081:8081 &
                         sleep 5
                         
-                        # Запускаем тесты
+                        # запускаем тесты
                         newman run application_tests.postman_collection.json \
                             --reporters cli,junit \
                             --reporter-junit-export results.xml
                         
-                        # Убиваем port-forward
+                        # убиваем port-forward
                         pkill -f "port-forward.*devops-app"
                     '''
                 }
