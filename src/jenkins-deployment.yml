@@ -16,6 +16,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
+  storageClassName: standard
 
 ---
 apiVersion: v1
@@ -25,7 +26,6 @@ metadata:
   namespace: jenkins
 
 ---
-# ClusterRoleBinding - даем Jenkins права администратора кластера
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -56,9 +56,14 @@ spec:
         app: jenkins
     spec:
       serviceAccountName: jenkins-admin
+      securityContext:
+        runAsUser: 0
+        fsGroup: 0
       containers:
       - name: jenkins
         image: jenkins/jenkins:lts
+        securityContext:
+          runAsUser: 0
         ports:
         - containerPort: 8080
           name: http
@@ -67,6 +72,22 @@ spec:
         volumeMounts:
         - name: jenkins-home
           mountPath: /var/jenkins_home
+        readinessProbe:
+          httpGet:
+            path: /login
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - |
+                apt-get update && apt-get install -y git curl && \
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+                chmod +x kubectl && mv kubectl /usr/local/bin/
       volumes:
       - name: jenkins-home
         persistentVolumeClaim:
