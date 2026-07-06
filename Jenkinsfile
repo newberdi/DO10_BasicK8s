@@ -2,26 +2,39 @@ pipeline {
     agent any
     
     stages {
-        stage('Hello') {
+        stage('Checkout') {
             steps {
-                echo 'Jenkins работает!'
-                sh 'echo "Текущая директория:"'
-                sh 'pwd'
-                sh 'echo "Файлы в директории:"'
-                sh 'ls -la'
+                checkout scm
             }
         }
         
-        stage('Check Environment') {
+        stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                    echo "=== Проверка Docker ==="
-                    docker --version || echo "Docker не найден"
-                    
-                    echo "=== Проверка Kubernetes ==="
-                    kubectl version --client || echo "kubectl не найден"
+                    kubectl apply -f k8s/namespace.yml
+                    kubectl apply -f k8s/configmap.yml
+                    kubectl apply -f k8s/secrets.yml
+                    bash k8s/postgres/generate-init.sh
+                    kubectl apply -f k8s/postgres/
+                    kubectl apply -f k8s/rabbitmq/
+                    kubectl wait --for=condition=ready pod -l app=postgres -n devops-app --timeout=120s
+                    kubectl wait --for=condition=ready pod -l app=rabbitmq -n devops-app --timeout=120s
+                    kubectl apply -f k8s/services/
                 '''
             }
+        }
+        
+        stage('Verify') {
+            steps {
+                sh 'kubectl get pods -n devops-app'
+                sh 'kubectl get services -n devops-app'
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo "Pipeline finished!"
         }
     }
 }
