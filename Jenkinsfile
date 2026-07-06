@@ -46,5 +46,32 @@ pipeline {
                 sh 'kubectl get pods -n devops-app'
             }
         }
+
+        stage('Run Postman Tests') {
+            steps {
+                dir('src/postman') {
+                    sh '''
+                        # Пробрасываем порт к gateway
+                        kubectl port-forward service/gateway-service -n devops-app 8087:8087 &
+                        kubectl port-forward service/session-service -n devops-app 8081:8081 &
+                        sleep 5
+                        
+                        # Запускаем тесты
+                        newman run collection.json \
+                            --reporters cli,junit \
+                            --reporter-junit-export results.xml
+                        
+                        # Убиваем port-forward
+                        pkill -f "port-forward.*devops-app"
+                    '''
+                }
+            }
+        }
+        
+        stage('Publish Results') {
+            steps {
+                junit 'src/tests/results.xml'
+            }
+        }
     }
 }
