@@ -57,7 +57,7 @@ pipeline {
                         sleep 5
                         
                         # Запускаем тесты
-                        newman run collection.json \
+                        newman run application_tests.postman_collection.json \
                             --reporters cli,junit \
                             --reporter-junit-export results.xml
                         
