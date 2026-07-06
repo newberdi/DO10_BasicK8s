@@ -1,12 +1,10 @@
 ---
-# 1. Namespace для Jenkins
 apiVersion: v1
 kind: Namespace
 metadata:
   name: jenkins
 
 ---
-# 2. PersistentVolumeClaim для хранения данных Jenkins
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -20,7 +18,6 @@ spec:
       storage: 10Gi
 
 ---
-# 3. ServiceAccount для Jenkins
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -28,7 +25,7 @@ metadata:
   namespace: jenkins
 
 ---
-# 4. ClusterRoleBinding - даем Jenkins права администратора кластера
+# ClusterRoleBinding - даем Jenkins права администратора кластера
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -43,7 +40,6 @@ subjects:
   namespace: jenkins
 
 ---
-# 5. Deployment для Jenkins
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -62,7 +58,7 @@ spec:
       serviceAccountName: jenkins-admin
       containers:
       - name: jenkins
-        image: jenkins/jenkins:lts-jdk17
+        image: jenkins/jenkins:lts
         ports:
         - containerPort: 8080
           name: http
@@ -77,7 +73,6 @@ spec:
           claimName: jenkins-pvc
 
 ---
-# 6. Service для доступа к Jenkins
 apiVersion: v1
 kind: Service
 metadata:
