@@ -15,7 +15,7 @@ pipeline {
                         kubectl apply -f k8s/namespace.yml
                         kubectl apply -f k8s/configmap.yml
                         kubectl apply -f k8s/secrets.yml
-                        bash k8s/postgres/generate-init.sh
+                        bash /var/jenkins_home/workspace/devops-pipeline/src/app/services/database/init.sql
                         kubectl apply -f k8s/postgres/
                         kubectl apply -f k8s/rabbitmq/
                     '''
