@@ -1,3 +1,23 @@
-kubectl
-kubectl.sha256
-minikube_latest_amd64.deb
+# Kubernetes secrets
+src/k8s/base/secrets.yml
+
+# Временные файлы
+*.tmp
+*.swp
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Логи
+*.log
+logs/
+
+# Собранные артефакты
+target/
+*.jar
+*.war
+
+.vagrant/
