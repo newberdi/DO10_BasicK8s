@@ -15,7 +15,8 @@ pipeline {
                         kubectl apply -f k8s/namespace.yml
                         kubectl apply -f k8s/configmap.yml
                         kubectl apply -f k8s/secrets.yml
-                        bash k8s/postgres/postgres-init-configmap.yml
+                        bash k8s/postgres/generate-init.sh
+                        kubectl k8s/postgres/postgres-init-configmap.yml
                         kubectl apply -f k8s/postgres/postgres-deployment.yml
                         kubectl apply -f k8s/rabbitmq/
                     '''
