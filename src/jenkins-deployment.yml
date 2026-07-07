@@ -1,12 +1,10 @@
 ---
-# 1. Namespace для Jenkins
 apiVersion: v1
 kind: Namespace
 metadata:
   name: jenkins
 
 ---
-# 2. PersistentVolumeClaim для хранения данных Jenkins
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -18,9 +16,9 @@ spec:
   resources:
     requests:
       storage: 10Gi
+  storageClassName: standard
 
 ---
-# 3. ServiceAccount для Jenkins
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -28,7 +26,6 @@ metadata:
   namespace: jenkins
 
 ---
-# 4. ClusterRoleBinding - даем Jenkins права администратора кластера
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -43,7 +40,6 @@ subjects:
   namespace: jenkins
 
 ---
-# 5. Deployment для Jenkins
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -60,9 +56,14 @@ spec:
         app: jenkins
     spec:
       serviceAccountName: jenkins-admin
+      securityContext:
+        runAsUser: 0
+        fsGroup: 0
       containers:
       - name: jenkins
-        image: jenkins/jenkins:lts-jdk17
+        image: jenkins/jenkins:lts
+        securityContext:
+          runAsUser: 0
         ports:
         - containerPort: 8080
           name: http
@@ -71,13 +72,28 @@ spec:
         volumeMounts:
         - name: jenkins-home
           mountPath: /var/jenkins_home
+        readinessProbe:
+          httpGet:
+            path: /login
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        lifecycle:
+          postStart:
+            exec:
+              command:
+              - /bin/bash
+              - -c
+              - |
+                apt-get update && apt-get install -y git curl && \
+                curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+                chmod +x kubectl && mv kubectl /usr/local/bin/
       volumes:
       - name: jenkins-home
         persistentVolumeClaim:
           claimName: jenkins-pvc
 
 ---
-# 6. Service для доступа к Jenkins
 apiVersion: v1
 kind: Service
 metadata:
