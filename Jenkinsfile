@@ -16,8 +16,7 @@ pipeline {
                         kubectl apply -f k8s/configmap.yml
                         kubectl apply -f k8s/secrets.yml
                         bash k8s/postgres/generate-init.sh
-                        kubectl apply -f k8s/postgres/postgres-init-configmap.yml
-                        kubectl apply -f k8s/postgres/postgres-deployment.yml
+                        kubectl apply -f k8s/postgres/
                         kubectl apply -f k8s/rabbitmq/
                     '''
                 }
@@ -57,9 +56,7 @@ pipeline {
                         sleep 5
                         
                         # запускаем тесты
-                        newman run application_tests.postman_collection.json \
-                            --reporters cli,junit \
-                            --reporter-junit-export results.xml
+                        newman run application_tests.postman_collection.json
                         
                         # убиваем port-forward
                         pkill -f "port-forward.*devops-app"

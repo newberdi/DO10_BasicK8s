@@ -307,6 +307,7 @@ kubectl version --client     # проверяем
 
 ![example](images/image_03.png)
 
+в браузере отображается
 ![minikube dashboard](images/image_04.png)
 
 4. Прокидываем туннели для доступа к развернутым сервисам с помощью команды `minikube service`.
@@ -465,3 +466,63 @@ rolling
 1. Сразу создает новый под (параллельно с работой старого)
 2. Как только новый готов — удаляет старый
 3. Не ждет полной остановки старого перед созданием нового
+
+
+### Part 3. Настройка Jenkins pipeline (для себя)
+
+Пишем манифест для Jenkins. Из важного - установка git и kubectl
+![jenkins manifest](images/image_30.png)
+
+Пишем Jenkinsfile c правильными путями
+![Jenkinsfile](images/image_31.png)
+
+Запускаем манифест
+```bash
+kubectl apply -f jenkins-deployment.yml  
+kubectl wait --for=condition=ready pod -l app=jenkins -n jenkins --timeout=120s  
+kubectl exec -it deployment/jenkins -n jenkins -- bash -c "
+        mkdir -p /var/jenkins_home/init.groovy.d
+        cat > /var/jenkins_home/init.groovy.d/admin.groovy << 'EOF'
+        import jenkins.model.*
+        import hudson.security.*
+        
+        def instance = Jenkins.getInstance()
+        def hudsonRealm = new HudsonPrivateSecurityRealm(false)
+        hudsonRealm.createAccount('admin', 'zadolbal')
+        instance.setSecurityRealm(hudsonRealm)
+        def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
+        instance.setAuthorizationStrategy(strategy)
+        instance.save()
+        EOF
+        "
+kubectl rollout restart deployment/jenkins -n jenkins  
+minikube service jenkins -n jenkins --url
+```
+![apply jenkins](images/image_32.png)
+
+Пересоздаем логин/пароль (потому что PVC с неудачных попыток сохранился и лень было заново настраивать пайплайны и настройки)
+![admin new](images/image_33.png)
+
+Дальше последовательность действий такая:
+1. вводим пароль (если норм запустили, а если пересоздавали, то обычная авторизация с логин/пароль)
+2. устанавливаем нужные плагины: git, Pipeline, Kubernetes CLI
+3. создаем новый пайплайн: New Item -> вводим название -> Выбираем тип (Pipeline) -> OK
+4. настраиваем для Github: Pipeline Definition -> Pipeline script from SCM
+                                                  SCM -> Git
+                                                  Repository URL: путь к репозиторию
+                                                  Branch: */develop
+                                                  Script Path: Jenkinsfile -> OK
+
+5. запускаем через Build now
+
+видим пайплайн
+![main page](images/image_34.png)
+
+меню пайплайна
+![pipeline menu](images/image_35.png)
+
+добавились тесты
+![postman](images/image_36.png)
+
+вывод консоли
+![pipeline menu](images/image_37.png)
